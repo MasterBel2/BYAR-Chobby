@@ -780,31 +780,51 @@ local function SetupInfoButtonsPanel(leftInfo, rightInfo, battle, battleID, myUs
 	local btnPlay
 	local btnSpectate
 
+	local function SetButtonStateInQueue(position)
+		ButtonUtilities.SetButtonSelected(btnPlay)
+		ButtonUtilities.SetButtonDeselected(btnSpectate)
+
+		btnSpectate.suppressButtonReaction = false
+		btnPlay.suppressButtonReaction = true
+
+		btnPlay.tooltip = i18n("tooltip_in_queue")
+		ButtonUtilities.SetCaption(btnPlay, i18n("in_queue"))
+
+		btnSpectate.tooltip = i18n("tooltip_leave_queue")
+		ButtonUtilities.SetCaption(btnSpectate, i18n("leave_queue"))
+		
+	end
 	local function SetButtonStatePlaying()
 		ButtonUtilities.SetButtonDeselected(btnSpectate)
-		ButtonUtilities.SetCaption(btnSpectate, i18n("spectate"))
 		ButtonUtilities.SetButtonSelected(btnPlay)
-		ButtonUtilities.SetCaption(btnPlay, i18n("playing"))
 
 		btnPlay.suppressButtonReaction = true
 		btnSpectate.suppressButtonReaction = false
 
 		btnPlay.tooltip = i18n("tooltip_is_player")
+		ButtonUtilities.SetCaption(btnPlay, i18n("playing"))
+
 		btnSpectate.tooltip = i18n("tooltip_become_spectator")
+		ButtonUtilities.SetCaption(btnSpectate, i18n("spectate"))
 
 	end
 	local function SetButtonStateSpectating()
 		ButtonUtilities.SetButtonDeselected(btnPlay)
-		ButtonUtilities.SetCaption(btnPlay, i18n("play"))
 		ButtonUtilities.SetButtonSelected(btnSpectate)
 
 		btnSpectate.suppressButtonReaction = true
 		btnPlay.suppressButtonReaction = false
 
 		btnSpectate.tooltip = i18n("tooltip_is_spectator")
-		btnPlay.tooltip = i18n("tooltip_become_player")
-
 		ButtonUtilities.SetCaption(btnSpectate, i18n("spectating"))
+
+		if battleLobby:GetBattlePlayerCount(battleID) == battle.maxPlayers then
+			btnPlay.tooltip = i18n("tooltip_join_queue")
+			ButtonUtilities.SetCaption(btnPlay, i18n("join_queue"))
+		else
+			btnPlay.tooltip = i18n("tooltip_become_player")
+			ButtonUtilities.SetCaption(btnPlay, i18n("play"))
+		end
 	end
 
 	btnSpectate = Button:New { -- Some properties set by SetButtonStatePlaying() after both buttons are initialised.
@@ -843,13 +863,21 @@ local function SetupInfoButtonsPanel(leftInfo, rightInfo, battle, battleID, myUs
 			function(obj)
 				local unusedTeamID = battleLobby:GetUnusedTeamID()
 				--Spring.Echo("unusedTeamID",unusedTeamID)
-				battleLobby:SetBattleStatus({
-					isSpectator = false,
-					isReady = false,
-					side = (WG.Chobby.Configuration.lastFactionChoice or 0),
-					teamNumber = unusedTeamID})
 
-				SetButtonStatePlaying()
+				local Coordinator = WG.TeiserverInternalClients.Coordinator
+
+				if Coordinator then
+					Coordinator:JoinQueue()
+					SetButtonStateInQueue()
+				else
+					battleLobby:SetBattleStatus({
+						isSpectator = false,
+						isReady = false,
+						side = (WG.Chobby.Configuration.lastFactionChoice or 0),
+						teamNumber = unusedTeamID})
+	
+					SetButtonStatePlaying()
+				end
 
 				WG.Analytics.SendOnetimeEvent("lobby:multiplayer:custom:play")
 				WG.Chobby.Configuration:SetConfigValue("lastGameSpectatorState", false)
@@ -1117,7 +1145,13 @@ local function SetupInfoButtonsPanel(leftInfo, rightInfo, battle, battleID, myUs
 	function externalFunctions.UpdateUserTeamStatus(userName, allyNumber, isSpectator)
 		if userName == myUserName then
 			if isSpectator then
-				SetButtonStateSpectating()
+				local Coordinator = WG.TeiserverInternalClients.Coordinator
+				if Coordinator and Coordinator.myPositionInQueue then
+					SetButtonStateInQueue(Coordinator.myPositionInQueue)
+				else
+					SetButtonStateSpectating()
+				end
+
 				startBoxPanel:Hide()
 				minimapPanel.disableChildrenHitTest = true --omg this is amazing
 			else
@@ -3196,6 +3230,9 @@ local function InitializeControls(battleID, oldLobby, topPoportion, setupData)
 	end
 
 	local function OnSaidBattle(listener, userName, message)
+		local status = battleLobby.users[userName] or {}
+		if status.hideMessagesFromInterface then return end
+
 		--ParseForVotingSaidBattle(userName,message) --only on EX?
 		local myUserName = battleLobby:GetMyUserName()
 		local iAmMentioned = myUserName and userName ~= myUserName and string.find(message, myUserName, nil, true)
@@ -3208,6 +3245,9 @@ local function InitializeControls(battleID, oldLobby, topPoportion, setupData)
 	local function OnSaidBattleEx(listener, userName, message)
 		local battle = battleLobby:GetBattle(battleID)
 		local hidemessage = false
+
+		local status = battleLobby.users[userName] or {}
+		if status.hideMessagesFromInterface then return end
 
 		if userName == battle.founder then -- todo dont do this for self-hosted
 			local hidespads = ParseSpadsMessage(userName,message)

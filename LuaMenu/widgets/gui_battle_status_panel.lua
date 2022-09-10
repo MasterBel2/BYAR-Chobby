@@ -315,7 +315,7 @@ local function InitializeControls(parentControl)
 	local function OnSaidBattle(listeners, userName, message)
 		local userInfo = lobby:TryGetUser(userName)
 		local myUserName = lobby:GetMyUserName()
-		if userInfo.isBot then
+		if userInfo.isBot or userInfo.hideMessagesFromInterface then
 			return
 		end
 		local iAmMentioned = myUserName and (string.find(message, myUserName, 1, true) and userName ~= myUserName)

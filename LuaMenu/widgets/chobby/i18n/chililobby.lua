@@ -139,6 +139,13 @@ return {
 		rejoin = "Rejoin",
 		abandon = "Abandon",
 
+		in_queue = "Waiting...",
+		tooltip_in_queue = "When a player leaves the lobby, you may be chosen as subtitute.",
+		leave_queue = "Leave Queue",
+		tooltip_leave_queue = "Select if you no longer wish to become a player when a space becomes available.",
+		join_queue = "Join Queue",
+		tooltip_join_queue = "Press to become a player when a space is available.",
+
 		tooltip_is_spectator = "You will spectate this game",
 		tooltip_become_spectator = "Press to watch the game as a spectator",
 		spectate = "Spectate",

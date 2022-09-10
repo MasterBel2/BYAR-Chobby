@@ -65,11 +65,15 @@ function ChatWindows:init()
 	-- channel chat
 	lobby:AddListener("OnSaid",
 		function(listener, chanName, userName, message, msgDate, source)
+			local status = lobby.users[userName] or {}
+			if status.hideMessagesFromInterface then return end
 			self:ProcessChat(chanName, userName, message, msgDate, CHAT_MENTION, nil, nil, source)
 		end
 	)
 	lobby:AddListener("OnSaidEx",
 		function(listener, chanName, userName, message, msgDate)
+			local status = lobby.users[userName] or {}
+			if status.hideMessagesFromInterface then return end
 			self:ProcessChat(chanName, userName, message, msgDate, CHAT_EX_MENTION, Configuration.meColor, true)
 		end
 	)
@@ -78,6 +82,9 @@ function ChatWindows:init()
 	self.privateChatConsoles = {}
 	lobby:AddListener("OnSayPrivate",
 		function(listener, userName, message, msgDate)
+			local userInfo = lobby.users[userName] or {}
+			if userInfo.hideMessagesFromInterface then return end
+			
 			local privateChatConsole = self:GetPrivateChatConsole(userName)
 			if self:IsChannelSelected(userName .. " messages") and self.activeUnreadMessages and self.activeUnreadMessages ~= 0 then
 				self.activeUnreadMessages = self.activeUnreadMessages + 1
@@ -87,6 +94,9 @@ function ChatWindows:init()
 	)
 	lobby:AddListener("OnSayPrivateEx",
 		function(listener, userName, message, msgDate)
+			local userInfo = lobby.users[userName] or {}
+			if userInfo.hideMessagesFromInterface then return end
+
 			local privateChatConsole = self:GetPrivateChatConsole(userName)
 			if self:IsChannelSelected(userName .. " messages") and self.activeUnreadMessages and self.activeUnreadMessages ~= 0 then
 				self.activeUnreadMessages = self.activeUnreadMessages + 1
@@ -96,6 +106,9 @@ function ChatWindows:init()
 	)
 	lobby:AddListener("OnSaidPrivate",
 		function(listener, userName, message, msgDate)
+			local userInfo = lobby.users[userName] or {}
+			if userInfo.hideMessagesFromInterface then return end
+
 			if userName == 'Nightwatch' then
 				local chanName, userName, msgDate, message = message:match('.-|(.+)|(.+)|(.+)|(.*)')
 				local channelConsole = self:GetChannelConsole(chanName)
@@ -115,6 +128,8 @@ function ChatWindows:init()
 	)
 	lobby:AddListener("OnSaidPrivateEx",
 		function(listener, userName, message, msgDate)
+			local userInfo = lobby.users[userName] or {}
+			if userInfo.hideMessagesFromInterface then return end
 			local chanName = userName .. " messages"
 			local privateChatConsole = self:GetPrivateChatConsole(userName)
 			if self:IsChannelSelected(chanName) and self.activeUnreadMessages and self.activeUnreadMessages ~= 0 then
